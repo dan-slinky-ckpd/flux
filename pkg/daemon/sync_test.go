@@ -504,7 +504,7 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 		t.Errorf("Sync was called with a nil syncDef")
 	}
 
-	// The emitted event has no workload ids
+    // A sync event is emitted and it only has updated workload ids
 	es, err := events.AllEvents(time.Time{}, -1, time.Time{})
 	if err != nil {
 		t.Error(err)
