@@ -21,13 +21,15 @@ import (
 	"github.com/fluxcd/flux/pkg/update"
 )
 
-// revisionRatchet is for keeping track of transitions between
+// ratchet is for keeping track of transitions between
 // revisions. This is slightly more complicated than just setting the
 // state, since we want to notice unexpected transitions (e.g., when
 // the apparent current state is not what we'd recorded).
-type revisionRatchet interface {
-	Current(ctx context.Context) (string, error)
-	Update(ctx context.Context, oldRev, newRev string) (bool, error)
+type ratchet interface {
+	CurrentRevision(ctx context.Context) (string, error)
+	CurrentResources(ctx context.Context) (map[string]resource.Resource, error)
+
+	Update(ctx context.Context, oldRev, newRev string, resources map[string]resource.Resource) (bool, error)
 }
 
 type eventLogger interface {
@@ -42,8 +44,8 @@ type changeSet struct {
 }
 
 // Sync starts the synchronization of the cluster with git.
-func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string, ratchet revisionRatchet) error {
-	currentRevision, err := ratchet.Current(ctx)
+func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string, ratchet ratchet) error {
+	currentRevision, err := ratchet.CurrentRevision(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,22 +60,31 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	}
 
 	// Get last-synced resources for comparison
-	var lastResources map[string]resource.Resource
-	if currentRevision == "" {
-		// Initial clone
-		lastResources = make(map[string]resource.Resource)
-	} else {
-		// Clone last-synced revision
-		lastSynced, err := d.Repo.Export(ctxt, currentRevision)
-		if err != nil {
-			return err
-		}
-		defer cleanupClone(lastSynced)
+	lastResources, err := ratchet.CurrentResources(ctx)
+	if err != nil {
+		return err
+	}
+	// Resource map is not initialized
+	if lastResources == nil {
+		if currentRevision == "" {
+			// Initial clone
+			lastResources = make(map[string]resource.Resource)
+		} else {
+			// Clone last-synced revision
+			lastSynced, err := d.Repo.Export(ctxt, currentRevision)
+			if err != nil {
+				return err
+			}
+			defer cleanupClone(lastSynced)
 
-		lastResourceStore, err := d.getManifestStore(lastSynced)
-		lastResources, err = lastResourceStore.GetAllResourcesByID(ctx)
-		if err != nil {
-			return err
+			lastResourceStore, err := d.getManifestStore(lastSynced)
+			if err != nil {
+				return errors.Wrap(err, "reading the repository checkout")
+			}
+			lastResources, err = lastResourceStore.GetAllResourcesByID(ctx)
+			if err != nil {
+				return errors.Wrap(err, "loading resources from repo")
+			}
 		}
 	}
 
@@ -143,7 +154,7 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	}
 
 	// Move the revision the sync state points to
-	if ok, err := ratchet.Update(ctx, changeSet.oldTagRev, changeSet.newTagRev); err != nil {
+	if ok, err := ratchet.Update(ctx, changeSet.oldTagRev, changeSet.newTagRev, resources); err != nil {
 		return err
 	} else if !ok {
 		return nil
@@ -155,11 +166,11 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 
 // getChangeSet returns the change set of commits for this sync,
 // including the revision range and if it is an initial sync.
-func (d *Daemon) getChangeSet(ctx context.Context, state revisionRatchet, headRev string) (changeSet, error) {
+func (d *Daemon) getChangeSet(ctx context.Context, state ratchet, headRev string) (changeSet, error) {
 	var c changeSet
 	var err error
 
-	currentRev, err := state.Current(ctx)
+	currentRev, err := state.CurrentRevision(ctx)
 	if err != nil {
 		return c, err
 	}
