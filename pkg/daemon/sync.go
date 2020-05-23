@@ -105,7 +105,7 @@ func (d *Daemon) Sync(ctx context.Context, started time.Time, newRevision string
 	}
 
 	// Retrieve change set of commits we need to sync
-	changeSet, err := getChangeSet(ctx, ratchet, newRevision)
+	changeSet, err := d.getChangeSet(ctx, ratchet, newRevision)
 	if err != nil {
 		return err
 	}
