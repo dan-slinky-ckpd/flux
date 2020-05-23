@@ -376,6 +376,43 @@ metadata:
 `,
 }
 
+// -+- .flux.yaml
+//  +- base/    -+- kustomization.yaml
+//  |            +- foo.yaml
+//  +- staging/ -+- kustomization.yaml
+//               +- staging.yaml
+
+var FilesForKustomize = map[string]string{
+	".flux.yaml": `version: 1
+patchUpdated:
+  generators:
+  - command: kustomize build .
+  patchFile: flux-patch.yaml
+`,
+	"base/kustomization.yaml": `resources:
+- foo.yaml
+`,
+	"base/foo.yaml": `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  annotations:
+    key: value
+`,
+	"staging/kustomization.yaml": `bases:
+- ../base/
+patches:
+- staging.yaml
+`,
+	"staging/staging.yaml": `apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  annotations:
+    env: staging
+`,
+}
+
 var SopsEncryptedFiles = map[string]string{
   "garbage": "This should just be ignored, since it is not YAML",
   "helloworld-deploy.yaml": `apiVersion: ENC[AES256_GCM,data:N/68Js00AtWIvks/pt+be5AW,iv:9Ke36D3faRNrMzm82Z9ETl3lOMhhWy8fh907K5e2Ar4=,tag:EfAzs1AQvLRH/tIQ+iZttw==,type:str]

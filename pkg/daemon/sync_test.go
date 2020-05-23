@@ -376,7 +376,7 @@ func TestDoSync_WithNewCommit(t *testing.T) {
 		t.Errorf("Sync was called with a nil syncDef")
 	}
 
-	// The emitted event has no workload ids
+	// An event is emitted and it only has a changed workload id
 	es, err := events.AllEvents(time.Time{}, -1, time.Time{})
 	if err != nil {
 		t.Error(err)
@@ -387,7 +387,6 @@ func TestDoSync_WithNewCommit(t *testing.T) {
 	} else {
 		gotResourceIDs := es[0].ServiceIDs
 		resource.IDs(gotResourceIDs).Sort()
-		// Event should only have changed workload ids
 		if !reflect.DeepEqual(gotResourceIDs, []resource.ID{resource.MustParseID("default:deployment/helloworld")}) {
 			t.Errorf("Unexpected event workload ids: %#v, expected: %#v", gotResourceIDs, []resource.ID{resource.MustParseID("default:deployment/helloworld")})
 		}
@@ -406,10 +405,20 @@ func TestDoSync_WithNewCommit(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestDoSync_WithMultidoc(t *testing.T) {
 	d, cleanup := daemon(t, testfiles.FilesMultidoc)
 	defer cleanup()
 
+=======
+func TestDoSync_WithKustomize(t *testing.T) {
+	d, cleanup := daemon(t, testfiles.FilesForKustomize)
+	defer cleanup()
+
+	d.GitConfig.Paths = []string{"staging"}
+	d.ManifestGenerationEnabled = true
+
+>>>>>>> ordovicia/fix-3018
 	ctx := context.Background()
 
 	var syncTag = "syncy-mcsyncface"
@@ -433,6 +442,7 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 		if err != nil {
 			return err
 		}
+<<<<<<< HEAD
 		// Push some new changes
 		cm := manifests.NewRawFiles(checkout.Dir(), checkout.AbsolutePaths(), d.Manifests)
 		resourcesByID, err := cm.GetAllResourcesByID(context.TODO())
@@ -446,17 +456,30 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 
 		}
 		absolutePath := path.Join(checkout.Dir(), res.Source())
+=======
+
+		// Push some new changes
+		absolutePath := path.Join(checkout.Dir(), "base", "foo.yaml")
+>>>>>>> ordovicia/fix-3018
 		def, err := ioutil.ReadFile(absolutePath)
 		if err != nil {
 			return err
 		}
+<<<<<<< HEAD
+=======
+
+>>>>>>> ordovicia/fix-3018
 		newDef := bytes.Replace(def, []byte("key: value"), []byte("key: value2"), -1)
 		if err := ioutil.WriteFile(absolutePath, newDef, 0600); err != nil {
 			return err
 		}
 
 		commitAction := git.CommitAction{Author: "", Message: "test commit"}
+<<<<<<< HEAD
 		err = checkout.CommitAndPush(ctx, commitAction, nil, false)
+=======
+		err = checkout.CommitAndPush(ctx, commitAction, nil, true)
+>>>>>>> ordovicia/fix-3018
 		if err != nil {
 			return err
 		}
@@ -474,11 +497,14 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 
 	syncCalled := 0
 	var syncDef *cluster.SyncSet
+<<<<<<< HEAD
 	expectedResourceIDs := resource.IDs{}
 	for id := range testfiles.ResourceMap {
 		expectedResourceIDs = append(expectedResourceIDs, id)
 	}
 	expectedResourceIDs.Sort()
+=======
+>>>>>>> ordovicia/fix-3018
 	k8s.SyncFunc = func(def cluster.SyncSet) error {
 		syncCalled++
 		syncDef = &def
@@ -504,7 +530,11 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 		t.Errorf("Sync was called with a nil syncDef")
 	}
 
+<<<<<<< HEAD
     // A sync event is emitted and it only has updated workload ids
+=======
+	// An event is emitted and it only has a changed workload id
+>>>>>>> ordovicia/fix-3018
 	es, err := events.AllEvents(time.Time{}, -1, time.Time{})
 	if err != nil {
 		t.Error(err)
@@ -515,6 +545,7 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 	} else {
 		gotResourceIDs := es[0].ServiceIDs
 		resource.IDs(gotResourceIDs).Sort()
+<<<<<<< HEAD
 
 		expected0 := []resource.ID{
 			resource.MustParseID("default:namespace/foo"),
@@ -530,6 +561,13 @@ func TestDoSync_WithMultidoc(t *testing.T) {
 			t.Errorf("Unexpected event workload ids: %#v, expected: %#v", gotResourceIDs, expected0)
 		}
 	}
+=======
+		if !reflect.DeepEqual(gotResourceIDs, []resource.ID{resource.MustParseID("default:namespace/foo")}) {
+			t.Errorf("Unexpected event workload ids: %#v, expected: %#v", gotResourceIDs, []resource.ID{resource.MustParseID("default:namespace/foo")})
+		}
+	}
+
+>>>>>>> ordovicia/fix-3018
 	// It moves the tag
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
