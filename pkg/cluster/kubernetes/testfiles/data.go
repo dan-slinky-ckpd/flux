@@ -27,8 +27,8 @@ func TempDir(t *testing.T) (string, func()) {
 }
 
 // WriteTestFiles ... given a directory, create files in it, based on predetermined file content
-func WriteTestFiles(dir string) error {
-  return writeFiles(dir, Files)
+func WriteTestFiles(dir string, files map[string]string) error {
+	return writeFiles(dir, files)
 }
 
 // WriteSopsEncryptedTestFiles ... given a directory, create files in it, based on predetermined file content.
@@ -355,6 +355,24 @@ spec:
         - -addr=:8080
         ports:
         - containerPort: 8080
+`,
+}
+
+var FilesMultidoc = map[string]string{
+	"namespaces.yaml": `---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: foo
+  annotations:
+    key: value
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bar
+  annotations:
+    key: value
 `,
 }
 
